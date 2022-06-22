@@ -3,6 +3,7 @@ extern crate reqwest; // 0.9.18
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::{thread, io};
 use std::{env, fmt, io::Read};
+use scraper::{Html, Selector};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let session_id = get_session_id()?;
@@ -112,41 +113,59 @@ fn fetch_rental_from_boplats(
     let mut body = String::new();
     res.read_to_string(&mut body)?;
 
-    let lines = body.lines();
+    let document = Html::parse_document(&body);
 
-    // let mut address = String::new();
-    let mut queue_length = String::new();
-    let mut queue_position = String::new();
-
-    for line in lines {
-        if line.contains("sökande just nu") {
-            queue_length = line.split_whitespace().next().unwrap().trim().to_string();
-        }
-        if line.contains("före dig om du anmäler intresse") {
-            queue_position = line
-                .split_whitespace()
-                .next()
-                .unwrap()
-                .trim()
-                .chars()
-                .skip(1)
-                .map(String::from)
-                .collect();
-        }
-    }
+    let queue_position = get_queue_position_from_rental_document(&document);
+    let queue_length = get_queue_length_from_rental_document(&document);
+    let location = get_location_from_rental_document(&document);
 
     let rental = Rental {
+        queue_length,
+        queue_position,
+        location,
         link: link.clone(),
-        queue_length: queue_length.parse().unwrap(),
-        queue_position: queue_position.parse().unwrap(),
     };
 
     Ok(rental)
 }
 
+fn get_location_from_rental_document(document: &Html) -> String {
+    let selector = Selector::parse("#maincontent > div > div.pageblock.objectinfo.pure-u-1.pure-u-md-3-5 > div > div.properties > div:nth-child(3) > p").unwrap();
+    let location = document.select(&selector).next().unwrap().inner_html();
+
+    location
+}
+
+fn get_queue_length_from_rental_document(document: &Html) -> u32 {
+    let selector = Selector::parse("#maincontent > div > div.pageblock.objectinfo.pure-u-1.pure-u-md-3-5 > div > div.properties > div.criteria > div:nth-child(2) > p > span > strong > a").unwrap();
+    let container = document.select(&selector).next().unwrap().inner_html();
+    let queue_length = container.split_whitespace().next().unwrap().trim().parse::<u32>().unwrap();
+
+    queue_length
+}
+
+fn get_queue_position_from_rental_document(document: &Html) -> u32 {
+    let selector = Selector::parse("#maincontent > div > div.pageblock.objectinfo.pure-u-1.pure-u-md-3-5 > div > div.properties > div.criteria > div:nth-child(2) > p > span > strong > a").unwrap();
+    let container = document.select(&selector).next().unwrap().inner_html();
+
+    let parentheses_char = "(".chars().nth(0).unwrap();
+    let queue_position = container
+        .chars()
+        .skip_while(|char| char.ne(&parentheses_char))
+        .skip(1)
+        .take_while(|char| !char.is_whitespace())
+        .map(String::from)
+        .collect::<String>()
+        .parse()
+        .unwrap();
+
+    queue_position
+}
+
 struct Rental {
     queue_length: u32,
     queue_position: u32,
+    location: String,
     link: String,
 }
 
@@ -154,8 +173,8 @@ impl fmt::Display for Rental {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} {} / {}",
-            self.link, self.queue_position, self.queue_length
+            "{} {} / {} {}",
+            self.link, self.queue_position, self.queue_length, self.location
         )
     }
 }
