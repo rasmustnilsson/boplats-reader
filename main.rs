@@ -1,14 +1,12 @@
 extern crate reqwest; // 0.9.18
 
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::thread;
+use std::{thread, io};
 use std::{env, fmt, io::Read};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = env::args().collect();
-    let session_id: &str = &args[1];
-
-    let mut rentals: Vec<Rental> = fetch_rentals_from_boplats(session_id).unwrap();
+    let session_id = get_session_id()?;
+    let mut rentals: Vec<Rental> = fetch_rentals_from_boplats(&session_id)?;
 
     rentals.sort_by_key(|rental| (rental.queue_position, rental.queue_length));
 
@@ -17,6 +15,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn get_session_id() -> Result<String, String> {
+    let args: Vec<String> = env::args().collect();
+    let second_arg = args.get(1);
+    if second_arg.is_some() {
+        let session_id = second_arg.unwrap();
+        if session_id.trim().is_empty() {
+            return Err(String::from("Session id can't be empty"));
+        }
+        return Ok(session_id.to_owned());
+    }
+
+    println!("Please enter your session id: ");
+    let mut buffer = String::new();
+    io::stdin()
+        .read_line(&mut buffer)
+        .map_err(|err| err.to_string())?;
+
+    let session_id = buffer.trim().to_string();
+    if session_id.is_empty() {
+        return Err(String::from("Session id can't be empty"));
+    }
+
+    Ok(session_id)
 }
 
 fn fetch_rentals_from_boplats(session_id: &str) -> Result<Vec<Rental>, Box<dyn std::error::Error>> {
