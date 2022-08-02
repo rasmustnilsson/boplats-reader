@@ -1,9 +1,10 @@
 extern crate reqwest; // 0.9.18
 
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::{thread, io};
-use std::{env, fmt, io::Read};
+use std::{thread};
+use std::{fmt, io::Read};
 use scraper::{Html, Selector};
+use clap::{Parser};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let session_id = get_session_id()?;
@@ -19,28 +20,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn get_session_id() -> Result<String, String> {
-    let args: Vec<String> = env::args().collect();
-    let second_arg = args.get(1);
-    if second_arg.is_some() {
-        let session_id = second_arg.unwrap();
-        if session_id.trim().is_empty() {
-            return Err(String::from("Session id can't be empty"));
-        }
-        return Ok(session_id.to_owned());
-    }
+    let cli = Cli::parse();
+    let session_id = cli.session_id;
 
-    println!("Please enter your session id: ");
-    let mut buffer = String::new();
-    io::stdin()
-        .read_line(&mut buffer)
-        .map_err(|err| err.to_string())?;
-
-    let session_id = buffer.trim().to_string();
-    if session_id.is_empty() {
+    if session_id.trim().is_empty() {
         return Err(String::from("Session id can't be empty"));
     }
-
-    Ok(session_id)
+    
+    Ok(session_id.to_owned())
 }
 
 fn fetch_rentals_from_boplats(session_id: &str) -> Result<Vec<Rental>, Box<dyn std::error::Error>> {
@@ -160,6 +147,13 @@ fn get_queue_position_from_rental_document(document: &Html) -> u32 {
         .unwrap();
 
     queue_position
+}
+
+#[derive(Parser)]
+#[clap(author, version, about, long_about = None)]
+struct Cli {
+    #[clap(value_parser)]
+    session_id: String,
 }
 
 struct Rental {
