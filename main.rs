@@ -117,14 +117,14 @@ fn fetch_rental_from_boplats(
 }
 
 fn get_location_from_rental_document(document: &Html) -> String {
-    let selector = Selector::parse("#maincontent > div > div.pageblock.objectinfo.pure-u-1.pure-u-md-3-5 > div > div.properties > div:nth-child(3) > p").unwrap();
+    let selector = Selector::parse("#maincontent > div > div.pageblock.objectinfo.pure-u-1.pure-u-md-1-2 > div > div.properties > div:nth-child(2) > p").unwrap();
     let location = document.select(&selector).next().unwrap().inner_html();
 
     location
 }
 
 fn get_queue_length_from_rental_document(document: &Html) -> u32 {
-    let selector = Selector::parse("#maincontent > div > div.pageblock.objectinfo.pure-u-1.pure-u-md-3-5 > div > div.properties > div.criteria > div:nth-child(2) > p > span > strong > a").unwrap();
+    let selector = Selector::parse("#maincontent > div > div.pageblock.objectinfo.pure-u-1.pure-u-md-1-2 > div > div.properties > div.criteria > div:nth-child(2) > p > span > strong > a").unwrap();
     let container = document.select(&selector).next().unwrap().inner_html();
     let queue_length = container.split_whitespace().next().unwrap().trim().parse::<u32>().unwrap();
 
@@ -132,7 +132,7 @@ fn get_queue_length_from_rental_document(document: &Html) -> u32 {
 }
 
 fn get_queue_position_from_rental_document(document: &Html) -> u32 {
-    let selector = Selector::parse("#maincontent > div > div.pageblock.objectinfo.pure-u-1.pure-u-md-3-5 > div > div.properties > div.criteria > div:nth-child(2) > p > span > strong > a").unwrap();
+    let selector = Selector::parse("#maincontent > div > div.pageblock.objectinfo.pure-u-1.pure-u-md-1-2 > div > div.properties > div.criteria > div:nth-child(2) > p > span > strong > a").unwrap();
     let container = document.select(&selector).next().unwrap().inner_html();
 
     let parentheses_char = "(".chars().nth(0).unwrap();
