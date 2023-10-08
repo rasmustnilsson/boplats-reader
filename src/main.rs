@@ -1,5 +1,3 @@
-extern crate reqwest; // 0.9.18
-
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::{fmt, io::Read};
