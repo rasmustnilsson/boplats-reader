@@ -1,10 +1,10 @@
 extern crate reqwest; // 0.9.18
 
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::{thread};
+use std::thread;
 use std::{fmt, io::Read};
 use scraper::{Html, Selector};
-use clap::{Parser};
+use clap::Parser;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let session_id = get_session_id()?;
@@ -51,10 +51,9 @@ fn fetch_rentals_from_boplats(session_id: &str) -> Result<Vec<Rental>, Box<dyn s
                     url.clone(),
                     &thread_session_id
                 );
-                if res.is_ok() {
-                    thread_send.send(res.unwrap()).unwrap();
-                } else {
-                    println!("Rental \"{}\" failed", url.clone());
+                match res {
+                    Ok(rental) => thread_send.send(rental).unwrap(),
+                    Err(_) => println!("Fetching rental \"{}\" failed", url.clone()),
                 }
             }));
         }
@@ -124,7 +123,7 @@ fn get_location_from_rental_document(document: &Html) -> String {
 }
 
 fn get_queue_length_from_rental_document(document: &Html) -> u32 {
-    let selector = Selector::parse("#maincontent > div > div.pageblock.objectinfo.pure-u-1.pure-u-md-1-2 > div > div.properties > div.criteria > div:nth-child(2) > p > span > strong > a").unwrap();
+    let selector = Selector::parse("#predicted-position").unwrap();
     let container = document.select(&selector).next().unwrap().inner_html();
     let queue_length = container.split_whitespace().next().unwrap().trim().parse::<u32>().unwrap();
 
@@ -132,10 +131,10 @@ fn get_queue_length_from_rental_document(document: &Html) -> u32 {
 }
 
 fn get_queue_position_from_rental_document(document: &Html) -> u32 {
-    let selector = Selector::parse("#maincontent > div > div.pageblock.objectinfo.pure-u-1.pure-u-md-1-2 > div > div.properties > div.criteria > div:nth-child(2) > p > span > strong > a").unwrap();
+    let selector = Selector::parse("#predicted-position").unwrap();
     let container = document.select(&selector).next().unwrap().inner_html();
 
-    let parentheses_char = "(".chars().nth(0).unwrap();
+    let parentheses_char = "(".chars().next().unwrap();
     let queue_position = container
         .chars()
         .skip_while(|char| char.ne(&parentheses_char))
